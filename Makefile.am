@@ -1575,6 +1575,12 @@ snmp_agent_la_LDFLAGS = $(PLUGIN_LDFLAGS) $(BUILD_WITH_LIBNETSNMPAGENT_LDFLAGS)
 snmp_agent_la_LIBADD = $(BUILD_WITH_LIBNETSNMPAGENT_LIBS)
 endif
 
+if BUILD_PLUGIN_STACKDRIVER_AGENT
+pkglib_LTLIBRARIES += stackdriver_agent.la
+stackdriver_agent_la_SOURCES = src/stackdriver_agent.c
+stackdriver_agent_la_LDFLAGS = -module -avoid-version
+endif
+
 if BUILD_PLUGIN_STATSD
 pkglib_LTLIBRARIES += statsd.la
 statsd_la_SOURCES = src/statsd.c
