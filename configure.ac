@@ -5,6 +5,7 @@ AC_CONFIG_SRCDIR(src/target_set.c)
 AC_CONFIG_HEADERS(src/config.h)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SUBDIRS([src/libmongoc])
 
 dnl older automake's default of ARFLAGS=cru is noisy on newer binutils;
 dnl we don't really need the 'u' even in older toolchains.  Then there is
@@ -3364,19 +3365,16 @@ AC_ARG_WITH([libmongoc],
       with_libmongoc="yes"
     else if test "x$withval" = "xno"; then
       with_libmongoc="no"
+    else if test "x$withval" = "xown"; then
+      with_libmongoc="yes"
+      with_own_libmongoc="yes"
+      AC_DEFINE(OWN_LIBMONGOC, 1, [Define to 1 if we use the shipped mongoc lib.])
     else
       with_libmongoc="no"
-    fi; fi
+    fi; fi; fi
   ],
   [with_libmongoc="yes"]
 )
-
-if test "x$with_libmongoc" = "xyes"; then
-  PKG_CHECK_MODULES([LIBMONGOC], [libmongoc-1.0],
-    [with_libmongoc="yes"],
-    [with_libmongoc="no (pkg-config could not find libmongoc)"]
-  )
-fi
 
 if test "x$with_libmongoc" = "xyes"; then
   SAVE_CPPFLAGS="$CPPFLAGS"
@@ -3387,15 +3385,17 @@ if test "x$with_libmongoc" = "xyes"; then
     AC_MSG_NOTICE([libmongoc CPPFLAGS: $LIBMONGOC_CFLAGS])
   fi
 
-  AC_CHECK_HEADERS([mongoc.h],
-    [with_libmongoc="yes"],
-    [with_libmongoc="no ('mongoc.h' not found)"]
-  )
+  if test "x$with_own_libmongoc" != "xyes"; then
+    AC_CHECK_HEADERS([mongo.h],
+      [with_libmongoc="yes"],
+      [with_libmongoc="no ('mongo.h' not found)"]
+    )
+  fi
 
   CPPFLAGS="$SAVE_CPPFLAGS"
 fi
 
-if test "x$with_libmongoc" = "xyes"; then
+if test "x$with_libmongoc" = "xyes" -a "x$with_own_libmongoc" != "xyes"; then
   SAVE_CPPFLAGS="$CPPFLAGS"
   SAVE_LDFLAGS="$LDFLAGS"
 
@@ -3406,9 +3406,9 @@ if test "x$with_libmongoc" = "xyes"; then
     AC_MSG_NOTICE([libmongoc LDFLAGS: $LIBMONGOC_LDFLAGS])
   fi
 
-  AC_CHECK_LIB([mongoc-1.0], [mongoc_init],
+  AC_CHECK_LIB([mongoc], [mongo_run_command],
     [with_libmongoc="yes"],
-    [with_libmongoc="no (symbol 'mongoc_init' not found)"]
+    [with_libmongoc="no (symbol 'mongo_run_command' not found)"]
   )
 
   CPPFLAGS="$SAVE_CPPFLAGS"
@@ -3422,6 +3422,7 @@ fi
 
 AC_SUBST([BUILD_WITH_LIBMONGOC_CFLAGS])
 AC_SUBST([BUILD_WITH_LIBMONGOC_LDFLAGS])
+AM_CONDITIONAL([BUILD_WITH_OWN_LIBMONGOC], [test "x$with_own_libmongoc" = "xyes"])
 # }}}
 
 # --with-libmosquitto {{{
@@ -6628,6 +6629,7 @@ AC_PLUGIN([memcached],           [yes],                     [memcached statistic
 AC_PLUGIN([memory],              [$plugin_memory],          [Memory usage])
 AC_PLUGIN([mic],                 [$with_mic],               [Intel Many Integrated Core stats])
 AC_PLUGIN([modbus],              [$with_libmodbus],         [Modbus plugin])
+AC_PLUGIN([mongodb],             [$with_libmongoc],         [MongoDB statistics])
 AC_PLUGIN([mqtt],                [$with_libmosquitto],      [MQTT output plugin])
 AC_PLUGIN([multimeter],          [$plugin_multimeter],      [Read multimeter values])
 AC_PLUGIN([mysql],               [$with_libmysql],          [MySQL statistics])
@@ -7052,6 +7054,7 @@ AC_MSG_RESULT([    memcached . . . . . . $enable_memcached])
 AC_MSG_RESULT([    memory  . . . . . . . $enable_memory])
 AC_MSG_RESULT([    mic . . . . . . . . . $enable_mic])
 AC_MSG_RESULT([    modbus  . . . . . . . $enable_modbus])
+AC_MSG_RESULT([    mongodb  . . . . .  . $enable_mongodb])
 AC_MSG_RESULT([    mqtt  . . . . . . . . $enable_mqtt])
 AC_MSG_RESULT([    multimeter  . . . . . $enable_multimeter])
 AC_MSG_RESULT([    mysql . . . . . . . . $enable_mysql])
