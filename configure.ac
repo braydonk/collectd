@@ -6514,6 +6514,7 @@ fi
 
 if test "x$with_libcurl" = "xyes" && test "x$with_libyajl" = "xyes"; then
   plugin_write_gcm="yes"
+  match_throttle_metadata_keys="yes"
 fi
 
 if test "x$have_getutent" = "xyes"; then
@@ -6618,6 +6619,7 @@ AC_PLUGIN([match_hashed],        [yes],                     [The hashed match])
 AC_PLUGIN([match_regex],         [yes],                     [The regex match])
 AC_PLUGIN([match_timediff],      [yes],                     [The timediff match])
 AC_PLUGIN([match_value],         [yes],                     [The value match])
+AC_PLUGIN([match_throttle_metadata_keys], [$match_throttle_metadata_keys], [Metadata key throttling plugin])
 AC_PLUGIN([mbmon],               [yes],                     [Query mbmond])
 AC_PLUGIN([mcelog],              [$plugin_mcelog],          [Machine Check Exceptions notifications])
 AC_PLUGIN([md],                  [$have_linux_raid_md_u_h], [md (Linux software RAID) devices])
@@ -7041,6 +7043,7 @@ AC_MSG_RESULT([    match_hashed  . . . . $enable_match_hashed])
 AC_MSG_RESULT([    match_regex . . . . . $enable_match_regex])
 AC_MSG_RESULT([    match_timediff  . . . $enable_match_timediff])
 AC_MSG_RESULT([    match_value . . . . . $enable_match_value])
+AC_MSG_RESULT([    match_throttle_metadata_keys $enable_match_throttle_metadata_keys])
 AC_MSG_RESULT([    mbmon . . . . . . . . $enable_mbmon])
 AC_MSG_RESULT([    mcelog  . . . . . . . $enable_mcelog])
 AC_MSG_RESULT([    md  . . . . . . . . . $enable_md])
