@@ -509,7 +509,7 @@ static EVP_PKEY *wg_credential_contex_load_pkey(char const *filename,
 // Otherwise returns 0.
 static int wg_curl_get_or_post(char *response_buffer,
     size_t response_buffer_size, const char *url, const char *body,
-    const char **headers, int num_headers);
+    const char **headers, int num_headers, _Bool silent_failures);
 
 //------------------------------------------------------------------------------
 // Private implementation starts here.
@@ -522,9 +522,11 @@ typedef struct {
 static size_t wg_curl_write_callback(char *ptr, size_t size, size_t nmemb,
                                      void *userdata);
 
-static int wg_curl_get_or_post(char *response_buffer,
-    size_t response_buffer_size, const char *url, const char *body,
-    const char **headers, int num_headers) {
+static int wg_curl_get_or_post(
+    char *response_buffer, size_t response_buffer_size, const char *url,
+    const char *body, const char **headers, int num_headers,
+    _Bool silent_failures)
+{
   DEBUG("write_gcm: Doing %s request: url %s, body %s, num_headers %d",
         body == NULL ? "GET" : "POST",
         url, body, num_headers);
@@ -574,8 +576,10 @@ static int wg_curl_get_or_post(char *response_buffer,
   curl_result = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
   write_ctx.data[0] = 0;
   if (response_code >= 400) {
-    WARNING("write_gcm: Unsuccessful HTTP request %ld: %s",
-    response_code, response_buffer);
+    if (!silent_failures) {
+      WARNING("write_gcm: Unsuccessful HTTP request %ld: %s",
+              response_code, response_buffer);
+    }
     result = -2;
     goto leave;
   }
@@ -596,7 +600,8 @@ static int wg_curl_get_or_post(char *response_buffer,
 }
 
 static size_t wg_curl_write_callback(char *ptr, size_t size, size_t nmemb,
-                                     void *userdata) {
+                                     void *userdata)
+{
   wg_curl_write_ctx_t *ctx = userdata;
   if (ctx->size == 0) {
     return 0;
@@ -1092,8 +1097,9 @@ static int wg_oauth2_talk_to_server_and_store_result(oauth2_ctx_t *ctx,
     const char *url, const char *body, const char **headers, int num_headers,
     cdtime_t now) {
   char response[2048];
-  if (wg_curl_get_or_post(response, sizeof(response), url, body,
-      headers, num_headers) != 0) {
+  if (wg_curl_get_or_post(
+          response, sizeof(response), url, body, headers, num_headers, 0)
+      != 0) {
     return -1;
   }
 
@@ -2100,24 +2106,27 @@ static monitored_resource_t *wg_monitored_resource_create_for_aws(
     const wg_configbuilder_t *cb, const char *project_id);
 
 // Fetch 'resource' from the GCP metadata server.
-static char *wg_get_from_gcp_metadata_server(const char *resource);
+static char *wg_get_from_gcp_metadata_server(
+    const char *resource, _Bool silent_failures);
 
 // Fetch 'resource' from the AWS metadata server.
-static char *wg_get_from_aws_metadata_server(const char *resource);
+static char *wg_get_from_aws_metadata_server(
+    const char *resource, _Bool silent_failures);
 
 // Fetches a resource (defined by the concatenation of 'base' and 'resource')
 // from an AWS or GCE metadata server and returns it. Returns NULL upon error.
-static char *wg_get_from_metadata_server(const char *base, const char *resource,
-    const char **headers, int num_headers);
+static char *wg_get_from_metadata_server(
+    const char *base, const char *resource,
+    const char **headers, int num_headers, _Bool silent_failures);
 
 static char * detect_cloud_provider() {
-  char * gcp_hostname = wg_get_from_gcp_metadata_server("instance/hostname");
+  char * gcp_hostname = wg_get_from_gcp_metadata_server("instance/hostname", 1);
   if (gcp_hostname != NULL) {
     sfree(gcp_hostname);
     return "gcp";
   }
 
-  char * aws_hostname = wg_get_from_aws_metadata_server("meta-data/hostname");
+  char * aws_hostname = wg_get_from_aws_metadata_server("meta-data/hostname", 1);
   if (aws_hostname != NULL) {
     sfree(aws_hostname);
     return "aws";
@@ -2249,7 +2258,7 @@ static monitored_resource_t *wg_monitored_resource_create_for_gcp(
   // metadata server.
   if (project_id_to_use == NULL) {
     // This gets the string id of the project (not the numeric id).
-    project_id_to_use = wg_get_from_gcp_metadata_server("project/project-id");
+    project_id_to_use = wg_get_from_gcp_metadata_server("project/project-id", 0);
     if (project_id_to_use == NULL) {
       ERROR("write_gcm: Can't get project ID from GCP metadata server "
           " (and 'Project' not specified in the config file).");
@@ -2259,7 +2268,7 @@ static monitored_resource_t *wg_monitored_resource_create_for_gcp(
 
   if (instance_id_to_use == NULL) {
     // This gets the numeric instance id.
-    instance_id_to_use = wg_get_from_gcp_metadata_server("instance/id");
+    instance_id_to_use = wg_get_from_gcp_metadata_server("instance/id", 0);
     if (instance_id_to_use == NULL) {
       ERROR("write_gcm: Can't get instance ID from GCP metadata server "
           " (and 'Instance' not specified in the config file).");
@@ -2270,7 +2279,7 @@ static monitored_resource_t *wg_monitored_resource_create_for_gcp(
   if (zone_to_use == NULL) {
     // This gets the zone.
     char *verbose_zone =
-        wg_get_from_gcp_metadata_server("instance/zone");
+        wg_get_from_gcp_metadata_server("instance/zone", 0);
     if (verbose_zone == NULL) {
       ERROR("write_gcm: Can't get zone ID from GCP metadata server "
           " (and 'Zone' not specified in the config file).");
@@ -2332,7 +2341,7 @@ static monitored_resource_t *wg_monitored_resource_create_for_aws(
   if (region_to_use == NULL || instance_id_to_use == NULL ||
       account_id_to_use == NULL) {
     iid_document = wg_get_from_aws_metadata_server(
-        "dynamic/instance-identity/document");
+        "dynamic/instance-identity/document", 0);
     if (iid_document == NULL) {
       ERROR("write_gcm: Can't get dynamic data from metadata server");
       goto leave;
@@ -2392,20 +2401,26 @@ static monitored_resource_t *wg_monitored_resource_create_for_aws(
   return result;
 }
 
-static char *wg_get_from_gcp_metadata_server(const char *resource) {
+static char *wg_get_from_gcp_metadata_server(
+    const char *resource, _Bool silent_failures)
+{
   const char *headers[] = { gcp_metadata_header };
   return wg_get_from_metadata_server(
       "http://169.254.169.254/computeMetadata/v1beta1/", resource,
-      headers, STATIC_ARRAY_SIZE(headers));
+      headers, STATIC_ARRAY_SIZE(headers), silent_failures);
 }
 
-static char *wg_get_from_aws_metadata_server(const char *resource) {
+static char *wg_get_from_aws_metadata_server(
+    const char *resource, _Bool silent_failures)
+{
   return wg_get_from_metadata_server(
-      "http://169.254.169.254/latest/", resource, NULL, 0);
+      "http://169.254.169.254/latest/", resource, NULL, 0, silent_failures);
 }
 
-static char *wg_get_from_metadata_server(const char *base, const char *resource,
-    const char **headers, int num_headers) {
+static char *wg_get_from_metadata_server(
+    const char *base, const char *resource,
+    const char **headers, int num_headers, _Bool silent_failures)
+{
   char url[256];
   int result = snprintf(url, sizeof(url), "%s%s", base, resource);
   if (result < 0 || result >= sizeof(url)) {
@@ -2414,9 +2429,13 @@ static char *wg_get_from_metadata_server(const char *base, const char *resource,
   }
 
   char buffer[2048];
-  if (wg_curl_get_or_post(buffer, sizeof(buffer), url, NULL, headers,
-      num_headers) != 0) {
-    INFO("write_gcm: wg_get_from_metadata_server failed fetching %s", url);
+  if (wg_curl_get_or_post(
+          buffer, sizeof(buffer), url, NULL, headers, num_headers,
+          silent_failures) != 0) {
+    if (!silent_failures) {
+      ERROR("write_gcm: wg_get_from_metadata_server failed to fetch metadata"
+            "from %s", url);
+    }
     return NULL;
   }
   return sstrdup(buffer);
@@ -3862,7 +3881,7 @@ static int wg_transmit_unique_segment(
 
       int wg_result = wg_curl_get_or_post(
           response, sizeof(response), ctx->agent_translation_service_url, json,
-          headers, STATIC_ARRAY_SIZE(headers));
+          headers, STATIC_ARRAY_SIZE(headers), 0);
       if (wg_result != 0) {
         wg_log_json_message(ctx, "Error %d from wg_curl_get_or_post\n",
                             wg_result);
@@ -3905,7 +3924,7 @@ static int wg_transmit_unique_segment(
 
         if (wg_curl_get_or_post(
                 response, sizeof(response), ctx->custom_metrics_url, json,
-                headers, STATIC_ARRAY_SIZE(headers)) != 0) {
+                headers, STATIC_ARRAY_SIZE(headers), 0) != 0) {
           wg_log_json_message(ctx, "Error contacting server.\n");
           ERROR("write_gcm: Error talking to the endpoint.");
           ++ctx->gsd_stats->api_connectivity_failures;
