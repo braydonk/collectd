@@ -415,6 +415,11 @@ test_plugin_ceph_LDADD = libplugin_mock.la $(BUILD_WITH_LIBYAJL_LIBS)
 check_PROGRAMS += test_plugin_ceph
 endif
 
+if BUILD_PLUGIN_LOGGING_METRICS
+bin_SCRIPTS = src/read_agent_logging
+CLEANFILES += $(bin_SCRIPTS)
+endif
+
 liblatency_la_SOURCES = \
 	src/utils_latency.c \
 	src/utils_latency.h \
