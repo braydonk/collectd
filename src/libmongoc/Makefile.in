@@ -83,7 +83,7 @@ host_triplet = @host@
 target_triplet = @target@
 bin_PROGRAMS = mongoc-stat$(EXEEXT)
 noinst_PROGRAMS =
-DIST_COMMON = $(srcdir)/doc/Makefile.am $(srcdir)/src/Makefile.am \
+DIST_COMMON = $(srcdir)/src/Makefile.am \
 	$(srcdir)/src/mongoc/Makefile.am \
 	$(srcdir)/src/tools/Makefile.am \
 	$(srcdir)/build/cmake/Makefile.am $(srcdir)/Makefile.in \
@@ -691,6 +691,7 @@ am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
 distcleancheck_listfiles = find . -type f -print
 ACLOCAL = @ACLOCAL@
 
+# include doc/Makefile.am
 # if ENABLE_MAN_PAGES
 # include doc/man/Makefile.am
 # endif
@@ -874,8 +875,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-EXTRA_DIST = $(wildcard doc/*.page) build/libbson.xsl \
-	$(MONGOC_DEF_FILES) src/libmongoc.symbols \
+EXTRA_DIST = $(MONGOC_DEF_FILES) src/libmongoc.symbols \
 	build/autotools/versions.ldscript src/libmongoc-1.0.pc.in \
 	src/libmongoc-ssl-1.0.pc.in build/cmake/FindSASL2.cmake \
 	build/cmake/FindBSON.cmake build/cmake/LoadVersion.cmake \
@@ -1064,7 +1064,7 @@ all: all-recursive
 .SUFFIXES: .c .lo .o .obj
 am--refresh: Makefile
 	@:
-$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am $(srcdir)/doc/Makefile.am $(srcdir)/src/Makefile.am $(srcdir)/src/mongoc/Makefile.am $(srcdir)/src/tools/Makefile.am $(srcdir)/build/cmake/Makefile.am $(am__configure_deps)
+$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am $(srcdir)/src/Makefile.am $(srcdir)/src/mongoc/Makefile.am $(srcdir)/src/tools/Makefile.am $(srcdir)/build/cmake/Makefile.am $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -1087,7 +1087,7 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe)'; \
 	    cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe);; \
 	esac;
-$(srcdir)/doc/Makefile.am $(srcdir)/src/Makefile.am $(srcdir)/src/mongoc/Makefile.am $(srcdir)/src/tools/Makefile.am $(srcdir)/build/cmake/Makefile.am:
+$(srcdir)/src/Makefile.am $(srcdir)/src/mongoc/Makefile.am $(srcdir)/src/tools/Makefile.am $(srcdir)/build/cmake/Makefile.am:
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	$(SHELL) ./config.status --recheck
@@ -3037,7 +3037,6 @@ uninstall-am: uninstall-binPROGRAMS uninstall-headerDATA \
 	uninstall-headerDATA uninstall-libLTLIBRARIES uninstall-local \
 	uninstall-mongocdocDATA uninstall-pkgconfigDATA
 
-dist-hook: man html
 
 dist-hook:
 	@if test -d "$(srcdir)/.git"; then                              \

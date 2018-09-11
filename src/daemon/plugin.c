@@ -665,7 +665,6 @@ static void stop_read_threads(void) {
   pthread_cond_broadcast(&read_cond);
   pthread_mutex_unlock(&read_lock);
 
-  sleep(0.25);
   for (size_t i = 0; i < read_threads_num; i++) {
     read_threads[i] = (pthread_t)0;
   }
@@ -874,7 +873,6 @@ static void stop_write_threads(void) /* {{{ */
   pthread_cond_broadcast(&write_cond);
   pthread_mutex_unlock(&write_lock);
 
-  sleep(0.25);
   for (i = 0; i < write_threads_num; i++) {
     write_threads[i] = (pthread_t)0;
   }
