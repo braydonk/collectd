@@ -5,7 +5,6 @@ AC_CONFIG_SRCDIR(src/target_set.c)
 AC_CONFIG_HEADERS(src/config.h)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SUBDIRS([src/libmongoc])
 
 dnl older automake's default of ARFLAGS=cru is noisy on newer binutils;
 dnl we don't really need the 'u' even in older toolchains.  Then there is
@@ -3369,6 +3368,7 @@ AC_ARG_WITH([libmongoc],
       with_libmongoc="yes"
       with_own_libmongoc="yes"
       AC_DEFINE(OWN_LIBMONGOC, 1, [Define to 1 if we use the shipped mongoc lib.])
+      AC_CONFIG_SUBDIRS([src/libmongoc])
     else
       with_libmongoc="no"
     fi; fi; fi
