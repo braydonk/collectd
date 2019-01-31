@@ -1212,7 +1212,7 @@ mongodb_la_CFLAGS += -Isrc/libmongoc/src/mongoc -Isrc/libmongoc/src/libbson/src/
 mongodb_la_LIBADD += src/libmongoc/libmongoc-1.0.la src/libmongoc/src/libbson/libbson.la
 
 else
-mongodb_la_LIBADD += -lmongoc
+mongodb_la_LIBADD += -lmongoc-1.0
 endif
 endif
 
