@@ -56,4 +56,4 @@ before_install:
       perl
       protobuf-c-compiler
       python-dev
-script: sh build.sh && ./configure && make distcheck
+script: sh build.sh && ./configure --with-libmongoc=own && make distcheck
