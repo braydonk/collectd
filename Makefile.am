@@ -126,6 +126,7 @@ noinst_LTLIBRARIES = \
 	libheap.la \
 	libignorelist.la \
 	liblatency.la \
+	libllist.la \
 	liblookup.la \
 	libmetadata.la \
 	libmount.la \
@@ -217,8 +218,6 @@ collectd_SOURCES = \
 	src/daemon/utils_cache.h \
 	src/daemon/utils_complain.c \
 	src/daemon/utils_complain.h \
-	src/daemon/utils_llist.c \
-	src/daemon/utils_llist.h \
 	src/daemon/utils_random.c \
 	src/daemon/utils_random.h \
 	src/daemon/utils_subst.c \
@@ -238,6 +237,7 @@ collectd_LDADD = \
 	libavltree.la \
 	libcommon.la \
 	libheap.la \
+	libllist.la \
 	liboconfig.la \
 	-lm \
 	$(COMMON_LIBS) \
@@ -355,6 +355,10 @@ libheap_la_SOURCES = \
 libignorelist_la_SOURCES = \
 	src/utils_ignorelist.c \
 	src/utils_ignorelist.h
+
+libllist_la_SOURCES = \
+	src/daemon/utils_llist.c \
+	src/daemon/utils_llist.h
 
 libmetadata_la_SOURCES = \
 	src/daemon/meta_data.c \
@@ -1838,11 +1842,39 @@ wireless_la_LDFLAGS = $(PLUGIN_LDFLAGS)
 endif
 
 if BUILD_PLUGIN_WRITE_GCM
+libstackdriver_json_la_SOURCES = \
+	src/utils_stackdriver_json.c \
+	src/utils_stackdriver_json.h
+libstackdriver_json_la_CPPFLAGS  = $(AM_CPPFLAGS) $(BUILD_WITH_LIBYAJL_CPPFLAGS)
+libstackdriver_json_la_LDFLAGS   = $(AM_LDFLAGS) $(BUILD_WITH_LIBYAJL_LDFLAGS)
+libstackdriver_json_la_LIBADD    = $(BUILD_WITH_LIBYAJL_LIBS) libcommon.la libllist.la
+
+noinst_LTLIBRARIES += libstackdriver_json.la
+check_PROGRAMS += test_stackdriver_json
+
+EXTRA_DIST += \
+	src/collectd_time_series_response_test.json \
+	src/time_series_summary_test.json
+
+AM_CPPFLAGS += \
+	-DSRCDIR='"${srcdir}"'
+
+test_stackdriver_json_SOURCES = \
+	src/utils_stackdriver_json_test.c \
+	src/testing.h
+test_stackdriver_json_LDADD = \
+	libstackdriver_json.la \
+	libmetadata.la \
+	libplugin_mock.la
+
 pkglib_LTLIBRARIES += write_gcm.la
 write_gcm_la_SOURCES = src/write_gcm.c
 write_gcm_la_LDFLAGS = -module -avoid-version $(BUILD_WITH_LIBYAJL_LDFLAGS)
 write_gcm_la_CFLAGS = $(AM_CFLAGS) $(BUILD_WITH_LIBYAJL_CPPFLAGS) $(BUILD_WITH_LIBCURL_CFLAGS)
-write_gcm_la_LIBADD = $(BUILD_WITH_LIBYAJL_LIBS) $(BUILD_WITH_LIBCURL_LIBS)
+write_gcm_la_LIBADD = \
+	$(BUILD_WITH_LIBYAJL_LIBS) \
+	$(BUILD_WITH_LIBCURL_LIBS) \
+	libstackdriver_json.la
 if BUILD_WITH_LIBSSL
 write_gcm_la_CFLAGS += $(BUILD_WITH_LIBSSL_CFLAGS)
 write_gcm_la_LIBADD += $(BUILD_WITH_LIBSSL_LIBS)

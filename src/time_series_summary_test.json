@@ -1,0 +1,40 @@
+{
+   "error" : {
+      "message" : "Retry in 300 milliseconds.",
+      "code" : 429,
+      "details" : [
+         {
+            "@type" : "type.googleapis.com/google.monitoring.v3.CreateTimeSeriesSummary",
+            "success_point_count" : 1,
+            "total_point_count" : 4,
+            "errors" : [
+               {
+                  "status" : {
+                     "code" : 429,
+                     "message" : "Retry in 500 milliseconds.",
+                     "status" : "RESOURCE_EXHAUSTED"
+                  },
+                  "point_count" : 2
+               },
+               {
+                  "status" : {
+                     "code" : 404,
+                     "status" : "NOT_FOUND"
+                  },
+                  "point_count" : 1
+               }
+            ]
+         },
+         {
+            "time_series" : {},
+            "@type" : "type.googleapis.com/google.monitoring.v3.CreateTimeSeriesError",
+            "status" : {
+               "code" : 429,
+               "message" : "Retry in 300 milliseconds.",
+               "status" : "RESOURCE_EXHAUSTED"
+            }
+         }
+      ],
+      "status" : "RESOURCE_EXHAUSTED"
+   }
+}
