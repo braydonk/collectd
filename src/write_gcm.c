@@ -3848,8 +3848,9 @@ static int wg_rebase_item(
   // element is sufficient.
   int ds_type = payload->values[0].ds_type;
 
-  // If any of the counters have wrapped, then we need to reset the tracker
-  // baseline and start_time.
+  // Check to see if any of the counter values have decreased from their last
+  // recorded value (indicating an overflow wrap or a reset). If so, reset the
+  // tracker baseline and start_time for all values within this payload.
   int some_counter_wrapped = 0;
   for (i = 0; i < payload->num_values; ++i) {
     if (wg_value_less(ds_type, &payload->values[i].val,
@@ -3859,9 +3860,12 @@ static int wg_rebase_item(
     }
   }
 
-  // If any counter wrapped, everybody resets.
   if (some_counter_wrapped) {
-    tracker->start_time = payload->start_time;
+    // Set the reset timestamp to be one millisecond before the timestamp of the
+    // current point. We don't know the true reset time but this ensures the
+    // range is non-zero while unlikely to conflict with any previous point.
+    tracker->start_time =
+        NS_TO_CDTIME_T(CDTIME_T_TO_NS(payload->start_time) - 1000000);
     for (i = 0; i < payload->num_values; ++i) {
       wg_value_set_zero(ds_type, &tracker->baselines[i]);
     }
