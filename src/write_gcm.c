@@ -1934,13 +1934,18 @@ static int wg_payload_key_compare(const wg_payload_key_t *l,
 //==============================================================================
 //==============================================================================
 typedef struct {
+  char *project_id;
+  // Data to construct the monitored resource from.
+  char *monitored_resource_type;
+  char **monitored_resource_label_keys;
+  char **monitored_resource_label_values;
+  size_t monitored_resource_num_labels;
   // "gcp" or "aws".
   // "gcp" expects project_id, instance_id, and zone (or will fetch them from
   // the metadata server.
   // "aws" expects project_id, instance_id, region, and account_id (or will
   // fetch them from the metadata server).
   char *cloud_provider;
-  char *project_id;
   char *instance_id;
   char *zone;
   char *region;
@@ -2057,6 +2062,53 @@ static wg_configbuilder_t *wg_configbuilder_create(int children_num,
   int c, k;
   for (c = 0; c < children_num; ++c) {
     const oconfig_item_t *child = &children[c];
+    if (strcasecmp(child->key, "Resource") == 0) {
+      if (cf_util_get_string(child, &cb->monitored_resource_type) != 0) {
+        ERROR("write_gcm: cf_util_get_string failed for key %s",
+              child->key);
+        ++parse_errors;
+      }
+      cb->monitored_resource_label_keys =
+          calloc(child->children_num, sizeof(char*));
+      if (cb->monitored_resource_label_keys == NULL) {
+        ERROR("write_gcm: could not allocate label keys of size %d",
+              child->children_num);
+        ++parse_errors;
+      }
+      cb->monitored_resource_label_values =
+          calloc(child->children_num, sizeof(char*));
+      if (cb->monitored_resource_label_values == NULL) {
+        ERROR("write_gcm: could not allocate label values of size %d",
+              child->children_num);
+        ++parse_errors;
+      }
+      if (cb->monitored_resource_label_keys != NULL &&
+          cb->monitored_resource_label_values != NULL) {
+        cb->monitored_resource_num_labels = child->children_num;
+        for (int i = 0; i < child->children_num; ++i) {
+          const oconfig_item_t *label = &child->children[i];
+          cb->monitored_resource_label_keys[i] = sstrdup(label->key);
+          if (cb->monitored_resource_label_keys[i] == NULL) {
+            ERROR("write_gcm: sstrdup failed for resource key %s", label->key);
+            ++parse_errors;
+          } else if (strcmp(label->key, "project_id") == 0) {
+            // It's not possible, in general, to validate the "project_id"
+            // resource label against the project extracted from the
+            // configuration, credentials, or the metadata server, so we
+            // disallow this label instead.
+            ERROR("write_gcm: key project_id is not allowed in resources");
+            ++parse_errors;
+          }
+          if (cf_util_get_string(
+                  label, &cb->monitored_resource_label_values[i]) != 0) {
+            ERROR("write_gcm: cf_util_get_string failed for resource key %s",
+                  label->key);
+            ++parse_errors;
+          }
+        }
+      }
+      continue;
+    }
     for (k = 0; k < STATIC_ARRAY_SIZE(string_keys); ++k) {
       if (strcasecmp(child->key, string_keys[k]) == 0) {
         if (cf_util_get_string(child, string_locations[k]) != 0) {
@@ -2113,6 +2165,28 @@ static wg_configbuilder_t *wg_configbuilder_create(int children_num,
     goto error;
   }
 
+  // Warn of deprecated config options.
+  if (cb->cloud_provider != NULL) {
+    WARNING("write_gcm: deprecated field CloudProvider used in the config. "
+        "Use 'Resource' instead.");
+  }
+  if (cb->instance_id != NULL) {
+    WARNING("write_gcm: deprecated field Instance used in the config. "
+        "Use 'Resource' instead.");
+  }
+  if (cb->zone) {
+    WARNING("write_gcm: deprecated field Zone used in the config. "
+        "Use 'Resource' instead.");
+  }
+  if (cb->region) {
+    WARNING("write_gcm: deprecated field Region used in the config. "
+        "Use 'Resource' instead.");
+  }
+  if (cb->account_id) {
+    WARNING("write_gcm: deprecated field Account used in the config. "
+        "Use 'Resource' instead.");
+  }
+
   // Either all or none of 'email', 'key_file', and 'passphrase' must be set.
   int num_set = 0;
   if (cb->email != NULL) {
@@ -2163,8 +2237,18 @@ static void wg_configbuilder_destroy(wg_configbuilder_t *cb) {
   sfree(cb->region);
   sfree(cb->zone);
   sfree(cb->instance_id);
-  sfree(cb->project_id);
   sfree(cb->cloud_provider);
+  // cb->monitored_resource_num_labels is guaranteed to be positive only if both
+  // cb->monitored_resource_label_keys and cb->monitored_resource_label_values
+  // are present.
+  for (int i = 0; i < cb->monitored_resource_num_labels; ++i) {
+    sfree(cb->monitored_resource_label_values[i]);
+    sfree(cb->monitored_resource_label_keys[i]);
+  }
+  sfree(cb->monitored_resource_label_values);
+  sfree(cb->monitored_resource_label_keys);
+  sfree(cb->monitored_resource_type);
+  sfree(cb->project_id);
   sfree(cb);
 }
 
@@ -2204,6 +2288,8 @@ static void wg_monitored_resource_destroy(monitored_resource_t *resource);
 //------------------------------------------------------------------------------
 // Private implementation starts here.
 //------------------------------------------------------------------------------
+static monitored_resource_t *wg_monitored_resource_create_explicit(
+    const wg_configbuilder_t *cb, const char *project_id);
 static monitored_resource_t *wg_monitored_resource_create_for_gcp(
     const wg_configbuilder_t *cb, const char *project_id);
 static monitored_resource_t *wg_monitored_resource_create_for_aws(
@@ -2241,6 +2327,9 @@ static char * detect_cloud_provider() {
 
 static monitored_resource_t *wg_monitored_resource_create(
     const wg_configbuilder_t *cb, const char *project_id) {
+  if (cb->monitored_resource_type != NULL) {
+    return wg_monitored_resource_create_explicit(cb, project_id);
+  }
   char *cloud_provider_to_use;
   if (cb->cloud_provider != NULL) {
     cloud_provider_to_use = cb->cloud_provider;
@@ -2350,8 +2439,44 @@ static void wg_monitored_resource_destroy(monitored_resource_t *resource) {
   sfree(resource);
 }
 
+static monitored_resource_t *wg_monitored_resource_create_explicit(
+    const wg_configbuilder_t *cb, const char *project_id) {
+  // Items to clean up upon leaving.
+  monitored_resource_t *result = NULL;
+  char *project_id_to_use = sstrdup(project_id);
+
+  // For items not specified in the config file, try to get them from the
+  // metadata server.
+  if (project_id_to_use == NULL) {
+    // This gets the string id of the project (not the numeric id).
+    project_id_to_use =
+        wg_get_from_gcp_metadata_server("project/project-id", 0);
+    if (project_id_to_use == NULL) {
+      ERROR("write_gcm: Can't get project ID from GCP metadata server "
+          " (and 'Project' not specified in the config file).");
+      goto leave;
+    }
+  }
+
+  {
+    size_t num_labels = cb->monitored_resource_num_labels;
+    // The scope of this array must end before the "leave:" label.
+    label_t labels[num_labels];
+    for (int i = 0; i < num_labels; i++) {
+      labels[i].key = cb->monitored_resource_label_keys[i];
+      labels[i].value = cb->monitored_resource_label_values[i];
+    }
+    result = monitored_resource_create_from_array(
+        cb->monitored_resource_type, project_id_to_use, labels, num_labels);
+  }
+
+ leave:
+  sfree(project_id_to_use);
+  return result;
+}
+
 static monitored_resource_t *wg_monitored_resource_create_for_gcp(
-    const wg_configbuilder_t *cb,  const char *project_id) {
+    const wg_configbuilder_t *cb, const char *project_id) {
   // Items to clean up upon leaving.
   monitored_resource_t *result = NULL;
   char *project_id_to_use = sstrdup(project_id);
