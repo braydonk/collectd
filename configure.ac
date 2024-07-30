@@ -5171,9 +5171,9 @@ if test "x$with_libssl" = "xyes"; then
   CPPFLAGS="$CPPFLAGS $with_libssl_cppflags"
   LDFLAGS="$LDFLAGS $with_libssl_ldflags"
 
-  AC_CHECK_LIB([ssl], [SSL_library_init],
+  AC_CHECK_LIB([ssl], [OPENSSL_init_ssl],
     [with_libssl="yes"],
-    [with_libssl="no (Symbol 'SSL_library_init' not found)"]
+    [with_libssl="no (Symbol 'OPENSSL_init_ssl' not found)"]
   )
 
   CPPFLAGS="$SAVE_CPPFLAGS"
