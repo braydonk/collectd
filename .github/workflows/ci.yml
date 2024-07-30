@@ -40,55 +40,56 @@ jobs:
         sh clean.sh
         sh build.sh
         autoreconf -vif     
-    - run: ./configure --build --disable-all-plugins \
-            --disable-static \
-            --disable-perl --without-libperl  --without-perl-bindings \
-            --enable-cpu \
-            --enable-df \
-            --enable-disk \
-            --enable-load \
-            --enable-logfile \
-            --enable-logging-metrics \
-            --enable-memory \
-            --enable-swap \
-            --enable-syslog \
-            --enable-interface \
-            --enable-tcpconns \
-            --enable-write_http \
-            --enable-aggregation \
-            --enable-conntrack \
-            --enable-csv \
-            --enable-nginx \
-            --enable-apache \
-            --enable-memcached \
-            --enable-mysql \
-            --enable-protocols \
-            --enable-postgresql \
-            --enable-plugin_mem \
-            --enable-processes \
-            --enable-python \
-            --enable-python3 \
-            --enable-ntpd \
-            --enable-nfs \
-            --enable-zookeeper \
-            --enable-stackdriver_agent \
-            --enable-exec \
-            --enable-tail \
-            --enable-statsd \
-            --enable-network \
-            --enable-match_regex --enable-target_set \
-            --enable-target_replace --enable-target_scale \
-            --enable-match_throttle_metadata_keys \
-            --enable-write_log \
-            --enable-unixsock \
-            --enable-java --with-java=/usr/lib/jvm/default-java \
-            --enable-redis --with-libhiredis \
-            --enable-curl \
-            --enable-curl_json \
-            --enable-mongodb \
-            --enable-varnish \
-            --enable-write_gcm \
-            --enable-debug
+    - run: | 
+        ./configure --build --disable-all-plugins \
+          --disable-static \
+          --disable-perl --without-libperl  --without-perl-bindings \
+          --enable-cpu \
+          --enable-df \
+          --enable-disk \
+          --enable-load \
+          --enable-logfile \
+          --enable-logging-metrics \
+          --enable-memory \
+          --enable-swap \
+          --enable-syslog \
+          --enable-interface \
+          --enable-tcpconns \
+          --enable-write_http \
+          --enable-aggregation \
+          --enable-conntrack \
+          --enable-csv \
+          --enable-nginx \
+          --enable-apache \
+          --enable-memcached \
+          --enable-mysql \
+          --enable-protocols \
+          --enable-postgresql \
+          --enable-plugin_mem \
+          --enable-processes \
+          --enable-python \
+          --enable-python3 \
+          --enable-ntpd \
+          --enable-nfs \
+          --enable-zookeeper \
+          --enable-stackdriver_agent \
+          --enable-exec \
+          --enable-tail \
+          --enable-statsd \
+          --enable-network \
+          --enable-match_regex --enable-target_set \
+          --enable-target_replace --enable-target_scale \
+          --enable-match_throttle_metadata_keys \
+          --enable-write_log \
+          --enable-unixsock \
+          --enable-java --with-java=/usr/lib/jvm/default-java \
+          --enable-redis --with-libhiredis \
+          --enable-curl \
+          --enable-curl_json \
+          --enable-mongodb \
+          --enable-varnish \
+          --enable-write_gcm \
+          --enable-debug
 
     # VERBOSE=1 dumps the contents of the test suites logs to standard output.
     # -fsanitize=address enables https://github.com/google/sanitizers/wiki/AddressSanitizer
