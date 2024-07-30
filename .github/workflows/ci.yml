@@ -39,7 +39,7 @@ jobs:
       run: |
         sh clean.sh
         sh build.sh
-        autoreconf -vif     
+        autoreconf -vif
     - run: | 
         ./configure --build --disable-all-plugins \
           --disable-static \
