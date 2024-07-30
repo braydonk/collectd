@@ -27,6 +27,7 @@ jobs:
           liblua5.1-0-dev \
           liblua5.2-dev \
           libmemcached-dev \
+          libhashkit-dev \
           libmicrohttpd-dev \
           libmnl-dev \
           libmodbus-dev \
