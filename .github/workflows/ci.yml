@@ -40,7 +40,7 @@ jobs:
         sh clean.sh
         sh build.sh
         autoreconf -vif     
-    - run: ./configure --disable-all-plugins \
+    - run: ./configure --build --disable-all-plugins \
             --disable-static \
             --disable-perl --without-libperl  --without-perl-bindings \
             --enable-cpu \
