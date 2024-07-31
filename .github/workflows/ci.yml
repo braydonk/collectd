@@ -41,7 +41,7 @@ jobs:
         sh build.sh
         autoreconf -vif
     - run: | 
-        ./configure --build --disable-all-plugins \
+        ./configure --disable-all-plugins \
           --disable-static \
           --disable-perl --without-libperl  --without-perl-bindings \
           --enable-cpu \
